@@ -345,6 +345,14 @@ function renderFleet() {
 
 let hoverCell = null;
 
+// CSS :hover stays accurate even when the pointer never moves, so prefer it
+// over the last mouseenter we saw.
+function hoveredCell() {
+  const el2 = el.playerGrid.querySelector(".cell:hover");
+  if (el2) return { r: +el2.dataset.r, c: +el2.dataset.c };
+  return hoverCell;
+}
+
 function clearPreview() {
   el.playerGrid.querySelectorAll(".preview, .preview-bad")
     .forEach(c => c.classList.remove("preview", "preview-bad"));
@@ -435,13 +443,15 @@ function reset() {
   el.rotateBtn.textContent = "Rotate (R): Horizontal";
   setStatus(`Place your fleet: click a cell to place your ${SHIPS[0].name} (${SHIPS[0].len}).`);
   render();
-  if (hoverCell) onPlayerHover(hoverCell.r, hoverCell.c);
+  const h = hoveredCell();
+  if (h) onPlayerHover(h.r, h.c);
 }
 
 el.rotateBtn.addEventListener("click", () => {
   state.horizontal = !state.horizontal;
   el.rotateBtn.textContent = `Rotate (R): ${state.horizontal ? "Horizontal" : "Vertical"}`;
-  if (hoverCell) onPlayerHover(hoverCell.r, hoverCell.c);
+  const h = hoveredCell();
+  if (h) onPlayerHover(h.r, h.c);
 });
 el.randomBtn.addEventListener("click", () => {
   if (state.phase !== "placing") return;
