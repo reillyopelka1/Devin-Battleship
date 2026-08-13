@@ -10,18 +10,21 @@ tab = next((t for t in pages if "index.html" in t["url"] or "battleship" in t["u
 ws = websocket.create_connection(tab["webSocketDebuggerUrl"], suppress_origin=True)
 _id = [0]
 
-def ev(expr):
+def cmd(method, params):
     _id[0] += 1
-    ws.send(json.dumps({"id": _id[0], "method": "Runtime.evaluate",
-                        "params": {"expression": expr, "returnByValue": True, "awaitPromise": True}}))
+    ws.send(json.dumps({"id": _id[0], "method": method, "params": params}))
     while True:
         msg = json.loads(ws.recv())
         if msg.get("id") == _id[0]:
-            res = msg["result"]
-            if "exceptionDetails" in res:
-                raise RuntimeError(res["exceptionDetails"].get("text") + " " +
-                                   str(res["exceptionDetails"].get("exception", {}).get("description", "")))
-            return res["result"].get("value")
+            return msg["result"]
+
+def ev(expr):
+    res = cmd("Runtime.evaluate",
+              {"expression": expr, "returnByValue": True, "awaitPromise": True})
+    if "exceptionDetails" in res:
+        raise RuntimeError(res["exceptionDetails"].get("text") + " " +
+                           str(res["exceptionDetails"].get("exception", {}).get("description", "")))
+    return res["result"].get("value")
 
 passed, failures = 0, []
 def check(name, cond, detail=""):
@@ -41,20 +44,30 @@ CELL = "document.querySelectorAll('#playerGrid .cell')[{}]"
 def pcell(r, c): return f"document.querySelector('#playerGrid .cell[data-r=\"{r}\"][data-c=\"{c}\"]')"
 def ecell(r, c): return f"document.querySelector('#enemyGrid .cell[data-r=\"{r}\"][data-c=\"{c}\"]')"
 
+def hover(sel):
+    """Move the real pointer over an element so CSS :hover matches too."""
+    box = ev(f"(()=>{{const b={sel}.getBoundingClientRect();"
+             f"return [b.left+b.width/2, b.top+b.height/2];}})()")
+    cmd("Input.dispatchMouseEvent",
+        {"type": "mouseMoved", "x": box[0], "y": box[1], "buttons": 0})
+
+def unhover():
+    cmd("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": 2, "y": 2, "buttons": 0})
+
 print("\n--- Manual placement ---")
 check("starts in placing phase, enemy grid not clickable",
       ev("state.phase") == "placing" and ev("!!document.querySelector('#enemyGrid .clickable')") is False)
 check("clicking enemy grid during placement does nothing",
       (ev(f"{ecell(0,0)}.click(); state.ai.shots[0][0]") is None))
 
-ev(f"{pcell(0,6)}.dispatchEvent(new MouseEvent('mouseenter'))")
+hover(pcell(0, 6))
 check("invalid hover shows preview-bad (Carrier at A7 would overflow)",
       ev("document.querySelectorAll('#playerGrid .preview-bad').length") > 0)
 ev(f"{pcell(0,6)}.click()")
 check("illegal placement rejected with message",
       ev("state.player.ships.length") == 0 and "Can't place" in ev("document.getElementById('status').textContent"))
 
-ev(f"{pcell(3,3)}.dispatchEvent(new MouseEvent('mouseenter'))")
+hover(pcell(3, 3))
 check("hover preview is horizontal before rotating",
       ev(f"{pcell(3,7)}.classList.contains('preview')") is True and
       ev(f"{pcell(7,3)}.classList.contains('preview')") is False)
@@ -63,7 +76,7 @@ check("R redraws the preview vertically without moving the cursor",
       ev(f"{pcell(7,3)}.classList.contains('preview')") is True and
       ev(f"{pcell(3,7)}.classList.contains('preview')") is False)
 ev("document.dispatchEvent(new KeyboardEvent('keydown',{key:'r'}))")
-ev(f"{pcell(3,3)}.dispatchEvent(new MouseEvent('mouseleave'))")
+unhover()
 
 ev(f"{pcell(0,0)}.click()")  # Carrier A1 horizontal
 check("Carrier placed and rendered", ev("state.player.ships.length") == 1 and
@@ -182,11 +195,25 @@ check("reset clears boards, log and phase",
       ev("document.querySelectorAll('#playerGrid .ship, #playerGrid .hit, #playerGrid .miss').length") == 0)
 check("rotate resets to horizontal label",
       "Horizontal" in ev("document.getElementById('rotateBtn').textContent"))
-ev(f"{pcell(3,3)}.dispatchEvent(new MouseEvent('mouseenter'))")
+hover(pcell(3, 3))
 ev("document.getElementById('resetBtn').click()")
 check("preview redraws at the hovered cell after New Game",
       ev(f"{pcell(3,7)}.classList.contains('preview')") is True)
-ev(f"{pcell(3,3)}.dispatchEvent(new MouseEvent('mouseleave'))")
+unhover()
+
+print("\n--- Sound ---")
+check("shot sounds play without throwing",
+      ev("(()=>{try{playShotSound(true);playShotSound(false);return 'ok';}catch(e){return String(e);}})()") == "ok")
+ev("document.getElementById('soundBtn').click()")
+check("sound toggles off",
+      ev("soundOn") is False and
+      "Off" in ev("document.getElementById('soundBtn').textContent") and
+      ev("document.getElementById('soundBtn').getAttribute('aria-pressed')") == "false")
+check("muted shots are silent but still safe",
+      ev("(()=>{try{playShotSound(true);return audioCtx===null||soundOn===false;}catch(e){return String(e);}})()") is True)
+ev("document.getElementById('soundBtn').click()")
+check("sound toggles back on",
+      ev("soundOn") is True and "On" in ev("document.getElementById('soundBtn').textContent"))
 
 print("\n--- Random placement path ---")
 ev("document.getElementById('randomBtn').click()")

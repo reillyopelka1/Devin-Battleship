@@ -80,6 +80,7 @@
   <button id="rotateBtn">Rotate (R): Horizontal</button>
   <button id="randomBtn">Random Placement</button>
   <button id="resetBtn">New Game</button>
+  <button id="soundBtn" aria-pressed="true">Sound: On</button>
 </div>
 
 <div id="boards">
@@ -225,7 +226,87 @@ const el = {
   rotateBtn: document.getElementById("rotateBtn"),
   randomBtn: document.getElementById("randomBtn"),
   resetBtn: document.getElementById("resetBtn"),
+  soundBtn: document.getElementById("soundBtn"),
 };
+
+// ---------- Sound (synthesized; no audio assets) ----------
+let soundOn = true;
+let audioCtx = null;
+
+function ctx() {
+  if (!audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    audioCtx = new AC();
+  }
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
+}
+
+function noiseBuffer(ac, seconds) {
+  const buf = ac.createBuffer(1, Math.floor(ac.sampleRate * seconds), ac.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  return buf;
+}
+
+// Filtered noise burst: a bright, quickly-damped splash.
+// An explicit context (e.g. OfflineAudioContext) can be passed to render it.
+function playSplash(ac) {
+  ac = ac || (soundOn && ctx());
+  if (!ac) return;
+  const t = ac.currentTime;
+  const src = ac.createBufferSource();
+  src.buffer = noiseBuffer(ac, 0.5);
+  const bp = ac.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.frequency.setValueAtTime(1400, t);
+  bp.frequency.exponentialRampToValueAtTime(320, t + 0.45);
+  bp.Q.value = 0.9;
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.5, t + 0.015);
+  g.gain.exponentialRampToValueAtTime(0.14, t + 0.12);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+  src.connect(bp).connect(g).connect(ac.destination);
+  src.start(t);
+  src.stop(t + 0.5);
+}
+
+// Low-passed noise plus a falling sine thump: a muffled explosion.
+function playExplosion(ac) {
+  ac = ac || (soundOn && ctx());
+  if (!ac) return;
+  const t = ac.currentTime;
+  const src = ac.createBufferSource();
+  src.buffer = noiseBuffer(ac, 0.9);
+  const lp = ac.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.setValueAtTime(1800, t);
+  lp.frequency.exponentialRampToValueAtTime(160, t + 0.8);
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.6, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.12, t + 0.25);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.85);
+  src.connect(lp).connect(g).connect(ac.destination);
+  src.start(t);
+  src.stop(t + 0.9);
+
+  const osc = ac.createOscillator();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(120, t);
+  osc.frequency.exponentialRampToValueAtTime(30, t + 0.5);
+  const og = ac.createGain();
+  og.gain.setValueAtTime(0.0001, t);
+  og.gain.exponentialRampToValueAtTime(0.5, t + 0.02);
+  og.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+  osc.connect(og).connect(ac.destination);
+  osc.start(t);
+  osc.stop(t + 0.6);
+}
+
+function playShotSound(hit) { hit ? playExplosion() : playSplash(); }
 
 let state;
 
@@ -247,6 +328,7 @@ function aiTurn() {
   } else {
     log(`Computer fires at ${coord} — miss.`);
   }
+  playShotSound(res.hit);
   render();
   if (allSunk(state.player)) {
     state.phase = "over";
@@ -402,6 +484,7 @@ function onEnemyClick(r, c) {
   } else {
     log(`You fire at ${coord} — miss.`);
   }
+  playShotSound(res.hit);
   render();
   if (allSunk(state.ai)) {
     state.phase = "over";
@@ -460,6 +543,12 @@ el.randomBtn.addEventListener("click", () => {
   startBattle();
 });
 el.resetBtn.addEventListener("click", reset);
+el.soundBtn.addEventListener("click", () => {
+  soundOn = !soundOn;
+  el.soundBtn.textContent = `Sound: ${soundOn ? "On" : "Off"}`;
+  el.soundBtn.setAttribute("aria-pressed", String(soundOn));
+  if (soundOn) playSplash();
+});
 document.addEventListener("keydown", e => {
   if (e.key.toLowerCase() === "r" && state.phase === "placing") el.rotateBtn.click();
 });
