@@ -432,10 +432,10 @@ function reset() {
   state = newState();
   state.gen = gen;
   el.log.innerHTML = "";
-  hoverCell = null;
   el.rotateBtn.textContent = "Rotate (R): Horizontal";
   setStatus(`Place your fleet: click a cell to place your ${SHIPS[0].name} (${SHIPS[0].len}).`);
   render();
+  if (hoverCell) onPlayerHover(hoverCell.r, hoverCell.c);
 }
 
 el.rotateBtn.addEventListener("click", () => {

@@ -182,6 +182,11 @@ check("reset clears boards, log and phase",
       ev("document.querySelectorAll('#playerGrid .ship, #playerGrid .hit, #playerGrid .miss').length") == 0)
 check("rotate resets to horizontal label",
       "Horizontal" in ev("document.getElementById('rotateBtn').textContent"))
+ev(f"{pcell(3,3)}.dispatchEvent(new MouseEvent('mouseenter'))")
+ev("document.getElementById('resetBtn').click()")
+check("preview redraws at the hovered cell after New Game",
+      ev(f"{pcell(3,7)}.classList.contains('preview')") is True)
+ev(f"{pcell(3,3)}.dispatchEvent(new MouseEvent('mouseleave'))")
 
 print("\n--- Random placement path ---")
 ev("document.getElementById('randomBtn').click()")
