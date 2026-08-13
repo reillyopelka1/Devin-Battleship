@@ -291,7 +291,7 @@ function buildGrid(container, isEnemy) {
       } else {
         cell.addEventListener("click", () => onPlayerClick(r, c));
         cell.addEventListener("mouseenter", () => onPlayerHover(r, c));
-        cell.addEventListener("mouseleave", clearPreview);
+        cell.addEventListener("mouseleave", () => { hoverCell = null; clearPreview(); });
       }
       container.appendChild(cell);
     }
@@ -343,12 +343,15 @@ function renderFleet() {
   el.fleet.innerHTML = lines.join("");
 }
 
+let hoverCell = null;
+
 function clearPreview() {
   el.playerGrid.querySelectorAll(".preview, .preview-bad")
     .forEach(c => c.classList.remove("preview", "preview-bad"));
 }
 
 function onPlayerHover(r, c) {
+  hoverCell = { r, c };
   if (state.phase !== "placing") return;
   clearPreview();
   const spec = SHIPS[state.placeIndex];
@@ -429,6 +432,7 @@ function reset() {
   state = newState();
   state.gen = gen;
   el.log.innerHTML = "";
+  hoverCell = null;
   el.rotateBtn.textContent = "Rotate (R): Horizontal";
   setStatus(`Place your fleet: click a cell to place your ${SHIPS[0].name} (${SHIPS[0].len}).`);
   render();
@@ -437,6 +441,7 @@ function reset() {
 el.rotateBtn.addEventListener("click", () => {
   state.horizontal = !state.horizontal;
   el.rotateBtn.textContent = `Rotate (R): ${state.horizontal ? "Horizontal" : "Vertical"}`;
+  if (hoverCell) onPlayerHover(hoverCell.r, hoverCell.c);
 });
 el.randomBtn.addEventListener("click", () => {
   if (state.phase !== "placing") return;

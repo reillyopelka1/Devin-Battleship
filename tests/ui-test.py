@@ -54,6 +54,17 @@ ev(f"{pcell(0,6)}.click()")
 check("illegal placement rejected with message",
       ev("state.player.ships.length") == 0 and "Can't place" in ev("document.getElementById('status').textContent"))
 
+ev(f"{pcell(3,3)}.dispatchEvent(new MouseEvent('mouseenter'))")
+check("hover preview is horizontal before rotating",
+      ev(f"{pcell(3,7)}.classList.contains('preview')") is True and
+      ev(f"{pcell(7,3)}.classList.contains('preview')") is False)
+ev("document.dispatchEvent(new KeyboardEvent('keydown',{key:'r'}))")
+check("R redraws the preview vertically without moving the cursor",
+      ev(f"{pcell(7,3)}.classList.contains('preview')") is True and
+      ev(f"{pcell(3,7)}.classList.contains('preview')") is False)
+ev("document.dispatchEvent(new KeyboardEvent('keydown',{key:'r'}))")
+ev(f"{pcell(3,3)}.dispatchEvent(new MouseEvent('mouseleave'))")
+
 ev(f"{pcell(0,0)}.click()")  # Carrier A1 horizontal
 check("Carrier placed and rendered", ev("state.player.ships.length") == 1 and
       ev(f"{pcell(0,4)}.classList.contains('ship')") is True)
