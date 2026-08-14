@@ -7,7 +7,7 @@ Classic Battleship against the computer, in a single self-contained HTML file. N
 - 10x10 grids, coordinates A1–J10.
 - Standard fleet: Carrier (5), Battleship (4), Cruiser (3), Submarine (3), Destroyer (2) — 17 cells.
 - Ships are placed horizontally or vertically, may touch, may not overlap.
-- A hit earns another shot; a miss passes the turn.
+- Turns strictly alternate: the turn passes to the other side after every shot, hit or miss.
 - First side to sink all five enemy ships wins.
 
 ## Playing

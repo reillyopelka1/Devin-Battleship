@@ -148,8 +148,8 @@ function playGame(gameNo) {
       }
       if (hitCells !== shipHits) errors.push("board hit total != sum of ship hits");
     }
-    // classic rule under test: hit => same player fires again
-    if (!res.hit) turn = 1 - turn;
+    // turn rule under test: turns always alternate, hit or miss
+    turn = 1 - turn;
   }
 
   const loserIdx = G.allSunk(boards[0]) ? 0 : (G.allSunk(boards[1]) ? 1 : -1);
@@ -160,6 +160,7 @@ function playGame(gameNo) {
     if (loser.ships.reduce((a, s) => a + s.hits, 0) !== 17) errors.push("winner did not land exactly 17 hits");
   }
   const winner = 1 - loserIdx;
+  if (Math.abs(shots[0] - shots[1]) > 1) errors.push("turns did not alternate (shot counts differ by more than 1)");
   return { gameNo, errors, shots: shots[winner], hits: hits[winner], winner };
 }
 
