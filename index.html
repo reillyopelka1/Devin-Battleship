@@ -453,14 +453,9 @@ function aiTurn() {
     showEndScreen(false);
     return;
   }
-  if (res.hit) {
-    setStatus("Computer hit! It fires again...");
-    scheduleAiTurn();
-  } else {
-    state.turn = "player";
-    setStatus("Your turn — fire at Enemy Waters.");
-    render();
-  }
+  state.turn = "player";
+  setStatus(res.hit ? "Computer hit! Your turn — fire at Enemy Waters." : "Your turn — fire at Enemy Waters.");
+  render();
 }
 
 // ---------- Rendering ----------
@@ -611,14 +606,10 @@ function onEnemyClick(r, c) {
     showEndScreen(true);
     return;
   }
-  if (res.hit) {
-    setStatus("Hit! Fire again.");
-  } else {
-    state.turn = "computer";
-    setStatus("Miss. Computer is taking aim...");
-    render();
-    scheduleAiTurn();
-  }
+  state.turn = "computer";
+  setStatus(res.hit ? "Hit! Computer is taking aim..." : "Miss. Computer is taking aim...");
+  render();
+  scheduleAiTurn();
 }
 
 function startBattle() {

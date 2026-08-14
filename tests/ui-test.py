@@ -123,9 +123,9 @@ hit = ev("(()=>{for(let r=0;r<10;r++)for(let c=0;c<10;c++)if(state.ai.shipAt[r][
 shots_before = ev("state.player.shots.flat().filter(Boolean).length")
 ev(f"{ecell(hit[0],hit[1])}.click()")
 ev("new Promise(r=>setTimeout(r,300))")
-check("hit renders and player keeps the turn (computer did not fire)",
+check("hit renders and the turn still passes to the computer",
       ev(f"{ecell(hit[0],hit[1])}.classList.contains('hit') || {ecell(hit[0],hit[1])}.classList.contains('sunk')") is True
-      and ev("state.player.shots.flat().filter(Boolean).length") == shots_before)
+      and ev("state.player.shots.flat().filter(Boolean).length") == shots_before + 1)
 
 print("\n--- Turn lock while the computer is thinking ---")
 ev("window.setTimeout = window.__origTimeout")  # restore real 700ms delay
@@ -133,6 +133,13 @@ ev("document.getElementById('resetBtn').click(); document.getElementById('random
 miss2 = ev("(()=>{for(let r=0;r<10;r++)for(let c=0;c<10;c++)if(!state.ai.shipAt[r][c]&&!state.ai.shots[r][c])return [r,c];})()")
 ev(f"{ecell(miss2[0],miss2[1])}.click()")
 check("turn hands to computer after a miss", ev("state.turn") == "computer")
+ev("new Promise(r=>window.__origTimeout(r,1500))")
+hit2 = ev("(()=>{for(let r=0;r<10;r++)for(let c=0;c<10;c++)if(state.ai.shipAt[r][c]&&!state.ai.shots[r][c])return [r,c];})()")
+ev(f"{ecell(hit2[0],hit2[1])}.click()")
+check("turn hands to computer after a hit too", ev("state.turn") == "computer")
+ev("new Promise(r=>window.__origTimeout(r,1500))")
+miss2 = ev("(()=>{for(let r=0;r<10;r++)for(let c=0;c<10;c++)if(!state.ai.shipAt[r][c]&&!state.ai.shots[r][c])return [r,c];})()")
+ev(f"{ecell(miss2[0],miss2[1])}.click()")
 locked_before = ev("state.ai.shots.flat().filter(Boolean).length")
 ev("(()=>{const c=[...document.querySelectorAll('#enemyGrid .cell')].find(x=>!state.ai.shots[+x.dataset.r][+x.dataset.c]); c.click();})()")
 check("clicks are ignored during the computer's delay",
@@ -162,6 +169,7 @@ ev("""
 window.__uiPlay = () => new Promise(resolve => {
   const step = () => {
     if (state.phase !== 'playing') return resolve(state.phase);
+    if (state.turn !== 'player') return setTimeout(step, 0);
     let target = null;
     outer: for (let r=0;r<10;r++) for (let c=0;c<10;c++) {
       if (!state.ai.shots[r][c] && state.ai.shipAt[r][c]) { target=[r,c]; break outer; }
@@ -181,6 +189,9 @@ check("all enemy ships marked sunk in fleet panel",
       "enemy: afloat" not in ev("document.getElementById('fleet').textContent"))
 check("no repeated shots recorded",
       ev("state.ai.shots.flat().filter(v=>v==='hit').length") == 17)
+check("strict alternation: both sides fired the same number of shots (±1)",
+      abs(ev("state.ai.shots.flat().filter(Boolean).length") -
+          ev("state.player.shots.flat().filter(Boolean).length")) <= 1)
 check("victory overlay shown with New Game button",
       ev("document.getElementById('endOverlay').hidden") is False and
       "Victory" in ev("document.getElementById('endTitle').textContent") and
