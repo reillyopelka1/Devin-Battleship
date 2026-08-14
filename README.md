@@ -16,6 +16,8 @@ Click cells on **Your Fleet** to place each ship (`R` or the Rotate button toggl
 
 Shots play synthesized sound effects — a splash on a miss, an explosion on a hit. **Sound: On/Off** mutes them. Nothing is downloaded; the audio is generated with the Web Audio API.
 
+When the last ship of a fleet goes down, a victory or defeat card appears over the boards (both grids stay visible) with a **New Game** button, plus an ascending major fanfare on a win and a descending minor jingle on a loss.
+
 The computer hunts on a checkerboard parity pattern and switches to targeting the neighbours of an unresolved hit until the ship sinks (~53 shots to win, vs ~95 for random fire).
 
 ## Tests

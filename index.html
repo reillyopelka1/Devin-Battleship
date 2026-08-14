@@ -71,6 +71,28 @@
     font-size: 13px; color: #b8cee1;
   }
   #log div { padding: 1px 0; }
+  #endOverlay {
+    position: fixed; inset: 0; display: flex; align-items: flex-end; justify-content: center;
+    padding-bottom: 3vh; background: rgba(3, 12, 20, .35); pointer-events: none; z-index: 10;
+  }
+  #endOverlay[hidden] { display: none; }
+  #endCard {
+    pointer-events: auto; text-align: center; padding: 16px 30px; border-radius: 10px;
+    background: rgba(11, 36, 57, .93); border: 2px solid #3a6b96;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, .55);
+    animation: endCardIn .35s ease-out;
+  }
+  #endCard.win { border-color: #f0c419; }
+  #endCard.lose { border-color: #d64545; }
+  #endTitle { font-size: 26px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 6px; }
+  #endCard.win #endTitle { color: #f0c419; }
+  #endCard.lose #endTitle { color: #ff8080; }
+  #endMsg { font-size: 15px; color: #cfe0ee; margin-bottom: 16px; }
+  #endNewGame { font-size: 16px; padding: 10px 22px; }
+  @keyframes endCardIn {
+    from { opacity: 0; transform: translateY(12px) scale(.96); }
+    to { opacity: 1; transform: none; }
+  }
 </style>
 </head>
 <body>
@@ -96,6 +118,14 @@
 </div>
 
 <div id="log"></div>
+
+<div id="endOverlay" role="dialog" aria-modal="false" aria-labelledby="endTitle" hidden>
+  <div id="endCard">
+    <div id="endTitle"></div>
+    <div id="endMsg"></div>
+    <button id="endNewGame">New Game</button>
+  </div>
+</div>
 
 <script>
 // ===== CORE LOGIC START (no DOM dependencies; extracted verbatim by tests/run-tests.js) =====
@@ -227,6 +257,11 @@ const el = {
   randomBtn: document.getElementById("randomBtn"),
   resetBtn: document.getElementById("resetBtn"),
   soundBtn: document.getElementById("soundBtn"),
+  endOverlay: document.getElementById("endOverlay"),
+  endCard: document.getElementById("endCard"),
+  endTitle: document.getElementById("endTitle"),
+  endMsg: document.getElementById("endMsg"),
+  endNewGame: document.getElementById("endNewGame"),
 };
 
 // ---------- Sound (synthesized; no audio assets) ----------
@@ -308,6 +343,55 @@ function playExplosion(ac) {
 
 function playShotSound(hit) { hit ? playExplosion() : playSplash(); }
 
+// One plucked note; `at` is an offset from the context's current time.
+function playNote(ac, freq, at, dur, peak) {
+  const t = ac.currentTime + at;
+  const osc = ac.createOscillator();
+  osc.type = "triangle";
+  osc.frequency.setValueAtTime(freq, t);
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(peak, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  osc.connect(g).connect(ac.destination);
+  osc.start(t);
+  osc.stop(t + dur + 0.02);
+}
+
+// Ascending C major arpeggio, ending on a held octave.
+function playFanfare(ac) {
+  ac = ac || (soundOn && ctx());
+  if (!ac) return;
+  [[523.25, 0], [659.25, 0.13], [783.99, 0.26], [1046.5, 0.39]]
+    .forEach(([f, at]) => playNote(ac, f, at, at === 0.39 ? 0.7 : 0.22, 0.28));
+  playNote(ac, 1567.98, 0.39, 0.7, 0.12);
+}
+
+// Descending A minor arpeggio, slower and darker.
+function playDefeatJingle(ac) {
+  ac = ac || (soundOn && ctx());
+  if (!ac) return;
+  [[440, 0], [349.23, 0.18], [261.63, 0.36], [220, 0.54]]
+    .forEach(([f, at]) => playNote(ac, f, at, at === 0.54 ? 0.9 : 0.3, 0.26));
+}
+
+function showEndScreen(won) {
+  el.endCard.classList.toggle("win", won);
+  el.endCard.classList.toggle("lose", !won);
+  el.endTitle.textContent = won ? "Victory!" : "Defeat";
+  el.endMsg.textContent = won
+    ? "You sank the enemy fleet."
+    : "Better luck next time.";
+  el.endOverlay.hidden = false;
+  el.endNewGame.focus();
+  won ? playFanfare() : playDefeatJingle();
+}
+
+function hideEndScreen() {
+  el.endOverlay.hidden = true;
+  el.endCard.classList.remove("win", "lose");
+}
+
 let state;
 
 function scheduleAiTurn() {
@@ -334,6 +418,7 @@ function aiTurn() {
     state.phase = "over";
     setStatus("The computer sank your entire fleet. You lose.");
     render();
+    showEndScreen(false);
     return;
   }
   if (res.hit) {
@@ -490,6 +575,7 @@ function onEnemyClick(r, c) {
     state.phase = "over";
     setStatus("You sank the entire enemy fleet. You win!");
     render();
+    showEndScreen(true);
     return;
   }
   if (res.hit) {
@@ -523,6 +609,7 @@ function reset() {
   state = newState();
   state.gen = gen;
   el.log.innerHTML = "";
+  hideEndScreen();
   el.rotateBtn.textContent = "Rotate (R): Horizontal";
   setStatus(`Place your fleet: click a cell to place your ${SHIPS[0].name} (${SHIPS[0].len}).`);
   render();
@@ -543,6 +630,7 @@ el.randomBtn.addEventListener("click", () => {
   startBattle();
 });
 el.resetBtn.addEventListener("click", reset);
+el.endNewGame.addEventListener("click", reset);
 el.soundBtn.addEventListener("click", () => {
   soundOn = !soundOn;
   el.soundBtn.textContent = `Sound: ${soundOn ? "On" : "Off"}`;
