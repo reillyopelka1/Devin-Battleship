@@ -181,12 +181,28 @@ check("all enemy ships marked sunk in fleet panel",
       "enemy: afloat" not in ev("document.getElementById('fleet').textContent"))
 check("no repeated shots recorded",
       ev("state.ai.shots.flat().filter(v=>v==='hit').length") == 17)
+check("victory overlay shown with New Game button",
+      ev("document.getElementById('endOverlay').hidden") is False and
+      "Victory" in ev("document.getElementById('endTitle').textContent") and
+      "sank the enemy fleet" in ev("document.getElementById('endMsg').textContent") and
+      ev("document.getElementById('endCard').classList.contains('win')") is True)
+check("overlay leaves the boards visible (small translucent card)",
+      ev("(()=>{const c=document.getElementById('endCard').getBoundingClientRect();"
+         "const frac=(c.width*c.height)/(innerWidth*innerHeight);"
+         "const bg=getComputedStyle(document.getElementById('endOverlay')).backgroundColor;"
+         "const a=parseFloat((bg.match(/rgba?\\([^)]*?,\\s*([\\d.]+)\\)/)||[])[1] ?? '1');"
+         "return frac < 0.25 && a < 0.6;})()") is True)
 check("firing after game over is ignored", (lambda b: (
       ev("(()=>{const c=[...document.querySelectorAll('#enemyGrid .cell')].find(x=>!state.ai.shots[+x.dataset.r][+x.dataset.c]); if(c) c.click(); return 1;})()"),
       ev("state.ai.shots.flat().filter(Boolean).length") == b)[1])(
       ev("state.ai.shots.flat().filter(Boolean).length")))
 
 print("\n--- New Game reset ---")
+ev("document.getElementById('endNewGame').click()")
+check("overlay New Game restarts and hides the overlay",
+      ev("document.getElementById('endOverlay').hidden") is True and
+      ev("state.phase") == "placing" and
+      ev("document.getElementById('endCard').className") == "")
 ev("document.getElementById('resetBtn').click()")
 check("reset clears boards, log and phase",
       ev("state.phase") == "placing" and ev("state.player.ships.length") == 0 and
@@ -214,6 +230,30 @@ check("muted shots are silent but still safe",
 ev("document.getElementById('soundBtn').click()")
 check("sound toggles back on",
       ev("soundOn") is True and "On" in ev("document.getElementById('soundBtn').textContent"))
+peaks = ev("""(async()=>{const peak=async fn=>{const off=new OfflineAudioContext(1,44100*2,44100);
+     fn(off);const b=await off.startRendering();let m=0;for(const v of b.getChannelData(0))
+     m=Math.max(m,Math.abs(v));return m;};
+     return [await peak(playFanfare), await peak(playDefeatJingle)];})()""")
+check("end-screen jingles render audible audio offline",
+      all(p > 0.05 for p in peaks), str(peaks))
+
+print("\n--- Defeat end screen ---")
+# Sink every player cell but one, then let the computer fire the finishing shot.
+ev("""(()=>{document.getElementById('resetBtn').click();
+     document.getElementById('randomBtn').click();
+     const cells = state.player.ships.flatMap(s => s.cells);
+     const last = cells.pop();
+     cells.forEach(([r,c]) => fire(state.player, r, c));
+     state.turn = 'computer';
+     state.aiTargets = [last];
+     aiTurn();
+     return state.player.shots.flat().filter(v=>v==='hit').length;})()""")
+check("defeat overlay shown when the computer wins",
+      ev("state.phase") == "over" and
+      ev("document.getElementById('endOverlay').hidden") is False and
+      "Defeat" in ev("document.getElementById('endTitle').textContent") and
+      ev("document.getElementById('endCard').classList.contains('lose')") is True)
+ev("document.getElementById('endNewGame').click()")
 
 print("\n--- Random placement path ---")
 ev("document.getElementById('randomBtn').click()")
