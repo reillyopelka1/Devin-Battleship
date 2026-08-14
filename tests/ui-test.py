@@ -231,11 +231,35 @@ check("muted shots are silent but still safe",
 ev("document.getElementById('soundBtn').click()")
 check("sound toggles back on",
       ev("soundOn") is True and "On" in ev("document.getElementById('soundBtn').textContent"))
+ev("""(()=>{window.__nodes=0;
+     const AC=window.AudioContext.prototype;
+     if(!AC.__counted){AC.__counted=1;
+       for(const m of ['createOscillator','createBufferSource']){
+         const o=AC[m];AC[m]=function(){window.__nodes++;return o.apply(this,arguments);};}}
+     return 1;})()""")
+ev("document.getElementById('resetBtn').click()")
+hover(pcell(2, 2))
+ev("(()=>{window.__nodes=0; return 1;})()")
+ev(f"{pcell(2,2)}.click()")
+check("placing a ship plays a sound", ev("window.__nodes") > 0)
+check("illegal placement plays no sound",
+      ev("(()=>{window.__nodes=0;"
+         "const before=state.player.ships.length;"
+         "document.querySelector('#playerGrid .cell[data-r=\"9\"][data-c=\"9\"]').click();"
+         "return state.player.ships.length===before ? window.__nodes : -1;})()") == 0)
+ev("document.getElementById('soundBtn').click()")
+ev("(()=>{window.__nodes=0; return 1;})()")
+ev(f"{pcell(5,0)}.click()")
+check("muted placement is silent", ev("window.__nodes") == 0)
+ev("document.getElementById('soundBtn').click()")
+ev("document.getElementById('resetBtn').click()")
+unhover()
+
 peaks = ev("""(async()=>{const peak=async fn=>{const off=new OfflineAudioContext(1,44100*2,44100);
      fn(off);const b=await off.startRendering();let m=0;for(const v of b.getChannelData(0))
      m=Math.max(m,Math.abs(v));return m;};
-     return [await peak(playFanfare), await peak(playDefeatJingle)];})()""")
-check("end-screen jingles render audible audio offline",
+     return [await peak(playFanfare), await peak(playDefeatJingle), await peak(playPlacement)];})()""")
+check("end-screen jingles and the placement thunk render audible audio offline",
       all(p > 0.05 for p in peaks), str(peaks))
 
 print("\n--- Defeat end screen ---")

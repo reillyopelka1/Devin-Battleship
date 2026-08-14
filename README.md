@@ -14,7 +14,7 @@ Classic Battleship against the computer, in a single self-contained HTML file. N
 
 Click cells on **Your Fleet** to place each ship (`R` or the Rotate button toggles orientation), or press **Random Placement**. Then click **Enemy Waters** to fire. **New Game** resets.
 
-Shots play synthesized sound effects — a splash on a miss, an explosion on a hit. **Sound: On/Off** mutes them. Nothing is downloaded; the audio is generated with the Web Audio API.
+Placing a ship thunks as the hull settles into the water. Shots play synthesized sound effects — a splash on a miss, an explosion on a hit. **Sound: On/Off** mutes them. Nothing is downloaded; the audio is generated with the Web Audio API.
 
 When the last ship of a fleet goes down, a victory or defeat card appears over the boards (both grids stay visible) with a **New Game** button, plus an ascending major fanfare on a win and a descending minor jingle on a loss.
 
