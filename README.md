@@ -14,6 +14,8 @@ Classic Battleship against the computer, in a single self-contained HTML file. N
 
 Click cells on **Your Fleet** to place each ship (`R` or the Rotate button toggles orientation), or press **Random Placement**. Then click **Enemy Waters** to fire. **New Game** resets.
 
+Shots play synthesized sound effects — a splash on a miss, an explosion on a hit. **Sound: On/Off** mutes them. Nothing is downloaded; the audio is generated with the Web Audio API.
+
 The computer hunts on a checkerboard parity pattern and switches to targeting the neighbours of an unresolved hit until the ship sinks (~53 shots to win, vs ~95 for random fire).
 
 ## Tests
