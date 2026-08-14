@@ -186,12 +186,13 @@ check("victory overlay shown with New Game button",
       "Victory" in ev("document.getElementById('endTitle').textContent") and
       "sank the enemy fleet" in ev("document.getElementById('endMsg').textContent") and
       ev("document.getElementById('endCard').classList.contains('win')") is True)
-check("overlay leaves the boards visible (small translucent card)",
+check("overlay card never covers either grid, and the scrim is translucent",
       ev("(()=>{const c=document.getElementById('endCard').getBoundingClientRect();"
-         "const frac=(c.width*c.height)/(innerWidth*innerHeight);"
+         "const clear=id=>{const g=document.getElementById(id).getBoundingClientRect();"
+         "return c.top>=g.bottom||c.bottom<=g.top||c.left>=g.right||c.right<=g.left;};"
          "const bg=getComputedStyle(document.getElementById('endOverlay')).backgroundColor;"
          "const a=parseFloat((bg.match(/rgba?\\([^)]*?,\\s*([\\d.]+)\\)/)||[])[1] ?? '1');"
-         "return frac < 0.25 && a < 0.6;})()") is True)
+         "return clear('playerGrid') && clear('enemyGrid') && a < 0.6;})()") is True)
 check("firing after game over is ignored", (lambda b: (
       ev("(()=>{const c=[...document.querySelectorAll('#enemyGrid .cell')].find(x=>!state.ai.shots[+x.dataset.r][+x.dataset.c]); if(c) c.click(); return 1;})()"),
       ev("state.ai.shots.flat().filter(Boolean).length") == b)[1])(

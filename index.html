@@ -72,25 +72,25 @@
   }
   #log div { padding: 1px 0; }
   #endOverlay {
-    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
-    background: rgba(3, 12, 20, .35); pointer-events: none; z-index: 10;
+    position: fixed; inset: 0; display: flex; align-items: flex-end; justify-content: center;
+    padding-bottom: 3vh; background: rgba(3, 12, 20, .35); pointer-events: none; z-index: 10;
   }
   #endOverlay[hidden] { display: none; }
   #endCard {
-    pointer-events: auto; text-align: center; padding: 22px 34px; border-radius: 10px;
+    pointer-events: auto; text-align: center; padding: 16px 30px; border-radius: 10px;
     background: rgba(11, 36, 57, .93); border: 2px solid #3a6b96;
     box-shadow: 0 14px 40px rgba(0, 0, 0, .55);
     animation: endCardIn .35s ease-out;
   }
   #endCard.win { border-color: #f0c419; }
   #endCard.lose { border-color: #d64545; }
-  #endTitle { font-size: 30px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 6px; }
+  #endTitle { font-size: 26px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 6px; }
   #endCard.win #endTitle { color: #f0c419; }
   #endCard.lose #endTitle { color: #ff8080; }
   #endMsg { font-size: 15px; color: #cfe0ee; margin-bottom: 16px; }
   #endNewGame { font-size: 16px; padding: 10px 22px; }
   @keyframes endCardIn {
-    from { opacity: 0; transform: translateY(-12px) scale(.96); }
+    from { opacity: 0; transform: translateY(12px) scale(.96); }
     to { opacity: 1; transform: none; }
   }
 </style>
