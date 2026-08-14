@@ -343,6 +343,38 @@ function playExplosion(ac) {
 
 function playShotSound(hit) { hit ? playExplosion() : playSplash(); }
 
+// Hull settling into the water: a short filtered noise thunk over a low thump.
+function playPlacement(ac) {
+  ac = ac || (soundOn && ctx());
+  if (!ac) return;
+  const t = ac.currentTime;
+  const src = ac.createBufferSource();
+  src.buffer = noiseBuffer(ac, 0.25);
+  const lp = ac.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.setValueAtTime(900, t);
+  lp.frequency.exponentialRampToValueAtTime(220, t + 0.2);
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.35, t + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+  src.connect(lp).connect(g).connect(ac.destination);
+  src.start(t);
+  src.stop(t + 0.25);
+
+  const osc = ac.createOscillator();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(180, t);
+  osc.frequency.exponentialRampToValueAtTime(70, t + 0.18);
+  const og = ac.createGain();
+  og.gain.setValueAtTime(0.0001, t);
+  og.gain.exponentialRampToValueAtTime(0.32, t + 0.01);
+  og.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+  osc.connect(og).connect(ac.destination);
+  osc.start(t);
+  osc.stop(t + 0.25);
+}
+
 // One plucked note; `at` is an offset from the context's current time.
 function playNote(ac, freq, at, dur, peak) {
   const t = ac.currentTime + at;
@@ -546,6 +578,7 @@ function onPlayerClick(r, c) {
     return;
   }
   placeShip(state.player, spec, r, c, state.horizontal);
+  playPlacement();
   state.placeIndex++;
   clearPreview();
   if (state.placeIndex >= SHIPS.length) startBattle();
@@ -626,6 +659,7 @@ el.rotateBtn.addEventListener("click", () => {
 el.randomBtn.addEventListener("click", () => {
   if (state.phase !== "placing") return;
   randomizeBoard(state.player);
+  playPlacement();
   state.placeIndex = SHIPS.length;
   startBattle();
 });
